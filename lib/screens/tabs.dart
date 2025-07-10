@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meals/providers/meals_provider.dart';
 import 'package:meals/screens/categories.dart';
 import 'package:meals/screens/filters.dart';
 import 'package:meals/screens/meals.dart';
@@ -12,17 +14,17 @@ const kInitialFilters = {
     Filter.vegan: false
   };
 
-class TabsScreen extends StatefulWidget {
+class TabsScreen extends ConsumerStatefulWidget {
   const TabsScreen({super.key});
 
   @override
-  State<StatefulWidget> createState() {
+  ConsumerState<TabsScreen> createState() {
     return _TabsScreenState();
   }
 
 }
 
-class _TabsScreenState extends State<TabsScreen> {
+class _TabsScreenState extends ConsumerState<TabsScreen> {
   int _selectedPageIndex = 0;
   final List<Meal> _favoriteMeals = [];
   Map<Filter, bool> _selectedFilters = kInitialFilters;
@@ -64,7 +66,7 @@ class _TabsScreenState extends State<TabsScreen> {
     if (identifier == 'filters') {
       final result = await Navigator.of(context).push<Map<Filter, bool>>(
         MaterialPageRoute(
-          builder: (ctx) => const FiltersScreen(),
+          builder: (ctx) => FiltersScreen(currentFilters: _selectedFilters,),
         ),
       );
 
@@ -76,7 +78,19 @@ class _TabsScreenState extends State<TabsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Widget activePage = CategoriesScreen(onToggleFavorite: _toggleMealFavoriteStatus,);
+    final meals = ref.watch(mealsProvider);
+    final availableMeals = meals.where((meal) {
+      if (_selectedFilters[Filter.glutenFree]! && !meal.isGlutenFree)  {return false;}
+      if (_selectedFilters[Filter.lactoseFree]! && !meal.isLactoseFree)  {return false;}
+      if (_selectedFilters[Filter.vegetarian]! && !meal.isVegetarian)  {return false;}
+      if (_selectedFilters[Filter.vegan]! && !meal.isVegan)  {return false;}
+      return true;
+    }).toList();
+
+    Widget activePage = CategoriesScreen(
+      onToggleFavorite: _toggleMealFavoriteStatus,
+      availableMeals: availableMeals,
+      );
     var activePageTitle = 'Categories';
 
     if (_selectedPageIndex == 1) {
